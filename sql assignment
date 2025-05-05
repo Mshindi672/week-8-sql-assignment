@@ -1,0 +1,343 @@
+SQL Schema and Sample Data
+Save this as library.sql.
+
+sql
+
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+⌄
+⌄
+⌄
+⌄
+⌄
+⌄
+⌄
+⌄
+-- Drop existing tables (optional for fresh setup)
+DROP TABLE IF EXISTS Loans;
+DROP TABLE IF EXISTS Books;
+DROP TABLE IF EXISTS Authors;
+DROP TABLE IF EXISTS Publishers;
+DROP TABLE IF EXISTS Users;
+
+-- Create Authors Table
+CREATE TABLE Authors (
+    AuthorID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    BirthDate DATE
+);
+
+-- Create Publishers Table
+CREATE TABLE Publishers (
+    PublisherID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Create Books Table
+CREATE TABLE Books (
+    BookID INT AUTO_INCREMENT PRIMARY KEY,
+    Title VARCHAR(255) NOT NULL,
+    ISBN VARCHAR(13) UNIQUE NOT NULL,
+    AuthorID INT NOT NULL,
+    PublisherID INT NOT NULL,
+    PublishedYear INT,
+    FOREIGN KEY (AuthorID) REFERENCES Authors(AuthorID),
+    FOREIGN KEY (PublisherID) REFERENCES Publishers(PublisherID)
+);
+
+-- Create Users Table
+CREATE TABLE Users (
+    UserID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    MembershipDate DATE NOT NULL
+);
+
+-- Create Loans Table (Many-to-Many Relationship)
+CREATE TABLE Loans (
+    LoanID INT AUTO_INCREMENT PRIMARY KEY,
+    UserID INT NOT NULL,
+    BookID INT NOT NULL,
+    LoanDate DATE NOT NULL,
+    ReturnDate DATE,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    FOREIGN KEY (BookID) REFERENCES Books(BookID)
+);
+
+-- Sample Data
+INSERT INTO Authors (Name, BirthDate) VALUES
+('George Orwell', '1903-06-25'),
+('J.K. Rowling', '1965-07-31');
+
+INSERT INTO Publishers (Name) VALUES
+('Penguin Books'),
+('Bloomsbury');
+
+INSERT INTO Books (Title, ISBN, AuthorID, PublisherID, PublishedYear) VALUES
+('1984', '978-3-16-148410-0', 1, 1, 1949),
+('Harry Potter and the Philosopher\'s Stone', '978-0-7475-3269-9', 2, 2, 1997);
+
+INSERT INTO Users (Name, Email, MembershipDate) VALUES
+('Alice Johnson', 'alice@example.com', '2023-01-15'),
+('Bob Smith', 'bob@example.com', '2022-11-20');
+
+INSERT INTO Loans (UserID, BookID, LoanDate, ReturnDate) VALUES
+(1, 1, '2023-10-01', '2023-10-15'),
+(2, 2, '2023-10-05', NULL);
+Question 2: Create a Simple CRUD API Using MySQL + Python (FastAPI)
+Use Case : Task Manager API
+Database Schema :
+
+Tasks : Track tasks with titles, descriptions, and due dates.
+Categories : Group tasks into categories (e.g., Work, Personal).
+Step 1: Database Setup
+Run this in MySQL:
+
+sql
+
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+⌄
+⌄
+⌄
+CREATE DATABASE TaskManager;
+
+USE TaskManager;
+
+CREATE TABLE Categories (
+    CategoryID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE Tasks (
+    TaskID INT AUTO_INCREMENT PRIMARY KEY,
+    Title VARCHAR(100) NOT NULL,
+    Description TEXT,
+    DueDate DATE,
+    CategoryID INT,
+    FOREIGN KEY (CategoryID) REFERENCES Categories(CategoryID)
+);
+
+-- Sample Data
+INSERT INTO Categories (Name) VALUES ('Work'), ('Personal');
+INSERT INTO Tasks (Title, Description, DueDate, CategoryID) VALUES
+('Finish Report', 'Complete Q4 financial report', '2023-11-15', 1),
+('Buy Groceries', 'Milk, eggs, bread', '2023-11-05', 2);
+Step 2: FastAPI Implementation
+Install dependencies:
+
+bash
+
+
+1
+pip install fastapi uvicorn sqlalchemy mysql-connector-python pydantic
+Save as main.py:
+
+python
+
+
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+⌄
+⌄
+⌄
+⌄
+⌄
+⌄
+⌄
+⌄
+⌄
+⌄
+from fastapi import FastAPI, HTTPException, Depends
+    db_category = CategoryDB(**category.dict())
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+@app.get("/categories/", response_model=list[Category])
+def read_categories(db: Session = Depends(get_db)):
+    return db.query(CategoryDB).all()
+
+@app.post("/tasks/", response_model=Task)
+def create_task(task: TaskCreate, db: Session = Depends(get_db)):
+    db_task = TaskDB(**task.dict())
+    db.add(db_task)
+    db.commit()
+    db.refresh(db_task)
+    return db_task
+
+@app.get("/tasks/", response_model=list[Task])
+def read_tasks(db: Session = Depends(get_db)):
+    return db.query(TaskDB).all()
+
+@app.get("/tasks/{task_id}", response_model=Task)
+def read_task(task_id: int, db: Session = Depends(get_db)):
+    task = db.query(TaskDB).filter(TaskDB.TaskID == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+
+@app.put("/tasks/{task_id}", response_model=Task)
+def update_task(task_id: int, updated_task: TaskCreate, db: Session = Depends(get_db)):
+    task = db.query(TaskDB).filter(TaskDB.TaskID == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    for key, value in updated_task.dict().items():
+        setattr(task, key, value)
+    db.commit()
+    db.refresh(task)
+    return task
+
+@app.delete("/tasks/{task_id}")
+def delete_task(task_id: int, db: Session = Depends(get_db)):
+    task = db.query(TaskDB).filter(TaskDB.TaskID == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    db.delete(task)
+    db.commit()
+    return {"detail": "Task deleted"}
+Run the API
+bash
+
+
+1
+uvicorn main
